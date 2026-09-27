@@ -1,24 +1,27 @@
 "use client";
 
 import { useMemo } from "react";
+import { invalidate } from "@react-three/fiber";
 import * as THREE from "three";
-import {
-  CHECKPOINT_ANCHORS,
-  FINAL_BUILDING,
-  HQ,
-  INTERCHANGE,
-  LANDMARK_ANCHORS,
-  PROJECT_ANCHORS,
-  SERVICE_SPREAD,
-} from "@/config/world";
+import { CONTACT } from "@/config/site";
 import { experienceLandmarks } from "@/data/missions";
 import { processSteps } from "@/data/process";
 import { projects } from "@/data/projects";
 import { services } from "@/data/services";
 import { team } from "@/data/team";
 import { useDisposable } from "@/hooks/useDisposable";
-import { ROAD_HALF_WIDTH, headingAt, offsetPoint } from "@/lib/route";
-import { routeT } from "@/lib/timeline";
+import { mutable, setSelectedService } from "@/lib/journey";
+import { BOARDS, FRAMES, gateFrame, type BoardPlacement } from "@/lib/landmarkLayout";
+import { ROAD_HALF_WIDTH } from "@/lib/route";
+import { FacadeBoard } from "./FacadeBoard";
+import {
+  experienceBoard,
+  finalBoard,
+  processBoard,
+  projectBoard,
+  serviceBoard,
+  teamBoard,
+} from "./facades";
 import { WorldLabel } from "./WorldLabel";
 
 /** One shared unlit material per accent colour. */
@@ -99,29 +102,36 @@ function useStructureMaterials() {
   );
 }
 
-/** Rotation that turns a structure to face back across the carriageway. */
-function facingRoad(heading: number, lateral: number): number {
-  return heading + (lateral < 0 ? Math.PI / 2 : -Math.PI / 2);
-}
-
 interface CommonProps {
   shadows: boolean;
+  /** Texture pixels per metre for facade boards. */
+  signDensity: number;
+}
+
+/** Position and turn for a board placed on its structure. */
+const boardAt = (b: BoardPlacement) => ({
+  position: [b.center[0], b.center[1], b.center[2]] as [number, number, number],
+  rotationY: b.back ? Math.PI : 0,
+});
+
+/** Hands a board control to a new tab, or to the mail client for `mailto:`. */
+function openLink(url: string): void {
+  if (url.startsWith("mailto:")) window.location.href = url;
+  else window.open(url, "_blank", "noopener,noreferrer");
 }
 
 // ---------------------------------------------------------------------------
 // Mission 01 — the studio headquarters, with a lit marker per team member.
 
-export function Headquarters({ shadows }: CommonProps) {
+export function Headquarters({ shadows, signDensity }: CommonProps) {
   const m = useStructureMaterials();
   const accents = useAccentMaterials(team.map((t) => t.accent));
   const litGlass = useLitGlass(["#7DA3FF"]);
-
-  const rt = routeT(HQ.at);
-  const base = offsetPoint(rt, HQ.lateral, 0);
-  const facing = facingRoad(headingAt(rt), HQ.lateral);
+  const board = useMemo(() => teamBoard(BOARDS.hq), []);
+  const { position, rotationY } = FRAMES.hq;
 
   return (
-    <group position={base} rotation={[0, facing, 0]}>
+    <group position={position} rotation={[0, rotationY, 0]}>
       <mesh position={[0, 0.35, 0]} material={m.plinth} receiveShadow={shadows}>
         <boxGeometry args={[34, 0.7, 26]} />
       </mesh>
@@ -148,7 +158,9 @@ export function Headquarters({ shadows }: CommonProps) {
         opacity={0.8}
       />
 
-      {/* One lit pillar per team member, colour-matched to their card. */}
+      <FacadeBoard spec={board} density={signDensity} {...boardAt(BOARDS.hq)} />
+
+      {/* One lit pillar per team member, colour-matched to their role on the facade. */}
       {team.map((member, i) => (
         <group key={member.id} position={[-7.5 + i * 5, 0, 9.5]}>
           <mesh position={[0, 1.6, 0]} material={m.frame}>
@@ -164,43 +176,46 @@ export function Headquarters({ shadows }: CommonProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Mission 02 — monoliths marking each strand of experience.
+// Mission 02 — monoliths marking each strand of experience, each turned a
+// little towards oncoming traffic so its face reads on the approach.
 
-export function ExperienceDistrict({ shadows }: CommonProps) {
+export function ExperienceDistrict({ shadows, signDensity }: CommonProps) {
   const m = useStructureMaterials();
   const accents = useAccentMaterials(experienceLandmarks.map((l) => l.accent));
   const litGlass = useLitGlass(experienceLandmarks.map((l) => l.accent));
+  const boards = useMemo(
+    () => experienceLandmarks.map((l) => experienceBoard(l, BOARDS.experience)),
+    [],
+  );
+  const face = boardAt(BOARDS.experience);
 
   return (
     <group>
       {experienceLandmarks.map((landmark, i) => {
-        const anchor = LANDMARK_ANCHORS[i];
-        const rt = routeT(anchor.at);
-        const base = offsetPoint(rt, anchor.lateral, 0);
-        const facing = facingRoad(headingAt(rt), anchor.lateral);
+        const { position, rotationY } = FRAMES.experience[i];
         const height = 13 + i * 1.6;
 
         return (
-          <group key={landmark.id} position={base} rotation={[0, facing, 0]}>
+          <group key={landmark.id} position={position} rotation={[0, rotationY, 0]}>
             <mesh position={[0, 0.3, 0]} material={m.plinth} receiveShadow={shadows}>
-              <boxGeometry args={[9, 0.6, 9]} />
+              <boxGeometry args={[10, 0.6, 7]} />
             </mesh>
             <mesh position={[0, height / 2, 0]} material={m.shell} castShadow={shadows}>
-              <boxGeometry args={[4.6, height, 4.6]} />
+              <boxGeometry args={[7.2, height, 3.4]} />
             </mesh>
-            <mesh
-              position={[0, height / 2, 2.32]}
-              material={litGlass.get(landmark.accent)}
-            >
-              <boxGeometry args={[2.8, height * 0.7, 0.1]} />
+            <mesh position={[0, height / 2, 1.72]} material={litGlass.get(landmark.accent)}>
+              <boxGeometry args={[6.6, height * 0.86, 0.1]} />
             </mesh>
             {/* A single accent strip reads at speed without resorting to neon. */}
-            <mesh position={[0, height / 2, 2.34]} material={accents.get(landmark.accent)}>
-              <boxGeometry args={[0.52, height * 0.78, 0.1]} />
+            <mesh position={[0, 7.3, 1.8]} material={accents.get(landmark.accent)}>
+              <boxGeometry args={[6.2, 0.14, 0.1]} />
             </mesh>
-            <mesh position={[0, height + 0.5, 0]} material={accents.get(landmark.accent)}>
-              <boxGeometry args={[1.4, 0.16, 1.4]} />
+            <mesh position={[0, height + 0.08, 0]} material={accents.get(landmark.accent)}>
+              <boxGeometry args={[7.6, 0.16, 3.8]} />
             </mesh>
+
+            <FacadeBoard spec={boards[i]} density={signDensity} {...face} />
+
             <WorldLabel
               text={landmark.label.toUpperCase()}
               position={[0, height + 1.9, 0]}
@@ -219,25 +234,25 @@ export function ExperienceDistrict({ shadows }: CommonProps) {
 // ---------------------------------------------------------------------------
 // Mission 03 — one tower per case study.
 
-export function ProjectDistrict({ shadows }: CommonProps) {
+export function ProjectDistrict({ shadows, signDensity }: CommonProps) {
   const m = useStructureMaterials();
   const accents = useAccentMaterials(projects.map((p) => p.accent));
   const litGlass = useLitGlass(projects.map((p) => p.accent));
+  const boards = useMemo(() => projects.map((p) => projectBoard(p, BOARDS.project)), []);
+  const face = boardAt(BOARDS.project);
 
   return (
     <group>
       {projects.map((project, i) => {
-        const anchor = PROJECT_ANCHORS[i];
-        const rt = routeT(anchor.at);
-        const base = offsetPoint(rt, anchor.lateral, 0);
-        const facing = facingRoad(headingAt(rt), anchor.lateral);
+        const { position, rotationY } = FRAMES.projects[i];
+        const link = project.liveUrl ?? project.githubUrl;
         // Taller than anything the generator produces, so a case study reads as
         // a destination rather than another block in the skyline.
         const height = 30 + (i % 2) * 8;
         const accent = accents.get(project.accent);
 
         return (
-          <group key={project.id} position={base} rotation={[0, facing, 0]}>
+          <group key={project.id} position={position} rotation={[0, rotationY, 0]}>
             <mesh position={[0, 0.3, 0]} material={m.plinth} receiveShadow={shadows}>
               <boxGeometry args={[24, 0.6, 20]} />
             </mesh>
@@ -274,18 +289,25 @@ export function ProjectDistrict({ shadows }: CommonProps) {
 
             <WorldLabel
               text={"PROJECT " + project.index}
-              position={[0, height * 0.66, 5.6]}
+              position={[0, height - 6, 5.6]}
               width={11}
               aspect={6}
               opacity={0.9}
             />
             <WorldLabel
               text={project.category.toUpperCase()}
-              position={[0, height * 0.66 - 1.9, 5.6]}
+              position={[0, height - 7.9, 5.6]}
               width={12}
               aspect={12}
               color={project.accent}
               opacity={0.85}
+            />
+
+            <FacadeBoard
+              spec={boards[i]}
+              density={signDensity}
+              {...face}
+              onSelect={link ? () => openLink(link) : undefined}
             />
           </group>
         );
@@ -297,51 +319,80 @@ export function ProjectDistrict({ shadows }: CommonProps) {
 // ---------------------------------------------------------------------------
 // Mission 04 — the interchange, where the road splits into service routes.
 
-export function Interchange({ shadows }: CommonProps) {
+/** Half the clear width of a service gate. */
+const GATE_POST = 4.2;
+
+export function Interchange({ shadows, signDensity }: CommonProps) {
   const m = useStructureMaterials();
   const accents = useAccentMaterials(services.map((s) => s.accent));
-
-  const rt = routeT(INTERCHANGE.at);
-  const base = offsetPoint(rt, 0, 0);
-  const heading = headingAt(rt);
+  const boards = useMemo(() => services.map((s) => serviceBoard(s, BOARDS.service)), []);
+  const face = boardAt(BOARDS.service);
+  const signTop = BOARDS.service.center[1] + BOARDS.service.height / 2;
+  const { position, rotationY } = FRAMES.interchange;
 
   return (
-    <group position={base} rotation={[0, heading, 0]}>
+    <group>
       {/* Widened apron under the split */}
-      <mesh
-        position={[0, 0.03, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        material={m.apron}
-        receiveShadow={shadows}
-      >
-        <planeGeometry args={[62, 46]} />
-      </mesh>
+      <group position={position} rotation={[0, rotationY, 0]}>
+        <mesh
+          position={[0, 0.03, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          material={m.apron}
+          receiveShadow={shadows}
+        >
+          <planeGeometry args={[62, 46]} />
+        </mesh>
+      </group>
 
-      {services.map((service, i) => (
-        <group key={service.id} position={[SERVICE_SPREAD[i], 0, -13]}>
-          {/* Gate uprights and lintel */}
-          <mesh position={[-2.6, 4, 0]} material={m.frame} castShadow={shadows}>
-            <boxGeometry args={[0.42, 8, 0.42]} />
-          </mesh>
-          <mesh position={[2.6, 4, 0]} material={m.frame} castShadow={shadows}>
-            <boxGeometry args={[0.42, 8, 0.42]} />
-          </mesh>
-          <mesh position={[0, 8.2, 0]} material={m.shell} castShadow={shadows}>
-            <boxGeometry args={[6, 0.8, 0.6]} />
-          </mesh>
-          <mesh position={[0, 7.5, 0.34]} material={accents.get(service.accent)}>
-            <boxGeometry args={[5.4, 0.14, 0.08]} />
-          </mesh>
-          <WorldLabel
-            text={service.title.toUpperCase()}
-            position={[0, 9.8, 0]}
-            width={9}
-            aspect={9}
-            opacity={0.8}
-            backToBack
-          />
-        </group>
-      ))}
+      {services.map((service, i) => {
+        const gate = gateFrame(i);
+        // Picking a route steers the car through this gate. One frame is enough
+        // to start the lane change; the frameloop keeps running until it ends.
+        const choose = () => {
+          setSelectedService(mutable.selectedService === service.id ? null : service.id);
+          invalidate();
+        };
+
+        return (
+          <group key={service.id} position={gate.position} rotation={[0, gate.rotationY, 0]}>
+            {/*
+              Gate uprights and lintel. Wide enough that the car's default lane
+              and the chase camera behind it both pass clear of the posts.
+            */}
+            <mesh position={[-GATE_POST, 4, 0]} material={m.frame} castShadow={shadows}>
+              <boxGeometry args={[0.42, 8, 0.42]} />
+            </mesh>
+            <mesh position={[GATE_POST, 4, 0]} material={m.frame} castShadow={shadows}>
+              <boxGeometry args={[0.42, 8, 0.42]} />
+            </mesh>
+            <mesh position={[0, 8.2, 0]} material={m.shell} castShadow={shadows}>
+              <boxGeometry args={[GATE_POST * 2 + 0.6, 0.8, 0.6]} />
+            </mesh>
+            <mesh position={[0, 7.5, -0.34]} material={accents.get(service.accent)}>
+              <boxGeometry args={[GATE_POST * 2 - 0.4, 0.14, 0.08]} />
+            </mesh>
+
+            {/* The route's sign, on posts rising from the lintel behind it. */}
+            <mesh position={[-GATE_POST, (8.6 + signTop) / 2, 0.12]} material={m.frame}>
+              <boxGeometry args={[0.3, signTop - 8.6, 0.3]} />
+            </mesh>
+            <mesh position={[GATE_POST, (8.6 + signTop) / 2, 0.12]} material={m.frame}>
+              <boxGeometry args={[0.3, signTop - 8.6, 0.3]} />
+            </mesh>
+            <mesh position={[0, BOARDS.service.center[1], 0]} material={m.shell} castShadow={shadows}>
+              <boxGeometry args={[BOARDS.service.width + 0.3, BOARDS.service.height + 0.3, 0.3]} />
+            </mesh>
+            <FacadeBoard spec={boards[i]} density={signDensity} {...face} onSelect={choose} />
+            <WorldLabel
+              text={service.title.toUpperCase()}
+              position={[0, BOARDS.service.center[1], 0.3]}
+              width={9}
+              aspect={9}
+              opacity={0.6}
+            />
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -349,43 +400,41 @@ export function Interchange({ shadows }: CommonProps) {
 // ---------------------------------------------------------------------------
 // Mission 05 — numbered gantries over the delivery route.
 
-export function Checkpoints({ shadows }: CommonProps) {
+export function Checkpoints({ shadows, signDensity }: CommonProps) {
   const m = useStructureMaterials();
   const span = (ROAD_HALF_WIDTH + 1.6) * 2;
+  const boards = useMemo(() => processSteps.map((s) => processBoard(s, BOARDS.checkpoint)), []);
+  const face = boardAt(BOARDS.checkpoint);
+  const beam = BOARDS.checkpoint.center[1] + BOARDS.checkpoint.height / 2 + 0.3;
 
   return (
     <group>
       {processSteps.map((step, i) => {
-        const anchor = CHECKPOINT_ANCHORS[i];
-        const rt = routeT(anchor.at);
-        const base = offsetPoint(rt, 0, 0);
-        const heading = headingAt(rt);
-        const caption = step.index + "  " + step.title.toUpperCase();
+        const { position, rotationY } = FRAMES.checkpoints[i];
 
         return (
-          <group key={step.index} position={base} rotation={[0, heading, 0]}>
-            <mesh position={[-span / 2, 3.4, 0]} material={m.frame} castShadow={shadows}>
-              <boxGeometry args={[0.34, 6.8, 0.34]} />
+          <group key={step.index} position={position} rotation={[0, rotationY, 0]}>
+            <mesh position={[-span / 2, beam / 2, 0]} material={m.frame} castShadow={shadows}>
+              <boxGeometry args={[0.34, beam, 0.34]} />
             </mesh>
-            <mesh position={[span / 2, 3.4, 0]} material={m.frame} castShadow={shadows}>
-              <boxGeometry args={[0.34, 6.8, 0.34]} />
+            <mesh position={[span / 2, beam / 2, 0]} material={m.frame} castShadow={shadows}>
+              <boxGeometry args={[0.34, beam, 0.34]} />
             </mesh>
-            <mesh position={[0, 6.9, 0]} material={m.shell} castShadow={shadows}>
-              <boxGeometry args={[span, 0.7, 0.5]} />
+            <mesh position={[0, beam, 0]} material={m.shell} castShadow={shadows}>
+              <boxGeometry args={[span, 0.6, 0.5]} />
             </mesh>
-            {/* Legible from both approach directions. */}
+            <mesh position={[0, BOARDS.checkpoint.center[1], 0]} material={m.shell}>
+              <boxGeometry
+                args={[BOARDS.checkpoint.width + 0.3, BOARDS.checkpoint.height + 0.3, 0.4]}
+              />
+            </mesh>
+
+            <FacadeBoard spec={boards[i]} density={signDensity} {...face} />
+            {/* The caption alone on the far side, for anyone looking back. */}
             <WorldLabel
-              text={caption}
-              position={[0, 6.9, 0.31]}
-              width={span * 0.86}
-              aspect={11}
-              opacity={0.88}
-            />
-            <WorldLabel
-              text={caption}
-              position={[0, 6.9, -0.31]}
-              rotationY={Math.PI}
-              width={span * 0.86}
+              text={step.index + "  " + step.title.toUpperCase()}
+              position={[0, BOARDS.checkpoint.center[1], 0.22]}
+              width={span * 0.6}
               aspect={11}
               opacity={0.5}
             />
@@ -399,17 +448,15 @@ export function Checkpoints({ shadows }: CommonProps) {
 // ---------------------------------------------------------------------------
 // Final mission — the destination building.
 
-export function Destination({ shadows }: CommonProps) {
+export function Destination({ shadows, signDensity }: CommonProps) {
   const m = useStructureMaterials();
   const accents = useAccentMaterials(["#7DA3FF"]);
   const litGlass = useLitGlass(["#7DA3FF"]);
-
-  const rt = routeT(FINAL_BUILDING.at);
-  const base = offsetPoint(rt, FINAL_BUILDING.lateral, 0);
-  const facing = facingRoad(headingAt(rt), FINAL_BUILDING.lateral);
+  const board = useMemo(() => finalBoard(BOARDS.final), []);
+  const { position, rotationY } = FRAMES.final;
 
   return (
-    <group position={base} rotation={[0, facing, 0]}>
+    <group position={position} rotation={[0, rotationY, 0]}>
       <mesh position={[0, 0.3, 0]} material={m.plinth} receiveShadow={shadows}>
         <boxGeometry args={[40, 0.6, 30]} />
       </mesh>
@@ -441,6 +488,13 @@ export function Destination({ shadows }: CommonProps) {
         width={20}
         aspect={8}
         opacity={0.85}
+      />
+
+      <FacadeBoard
+        spec={board}
+        density={signDensity}
+        {...boardAt(BOARDS.final)}
+        onSelect={() => openLink(`mailto:${CONTACT.email}`)}
       />
     </group>
   );

@@ -6,8 +6,10 @@ import * as THREE from "three";
 import { CAMERA } from "@/config/scene";
 import { FINAL_BUILDING, HQ, PROJECT_ANCHORS } from "@/config/world";
 import { missionAt, projectStops, serviceChoiceAt } from "@/data/missions";
+import { cameraState } from "@/lib/cameraState";
 import { carState } from "@/lib/carState";
 import { mutable } from "@/lib/journey";
+import { VIEWPOINTS, type Viewpoint } from "@/lib/landmarkLayout";
 import { clamp, damp, lerp, proximity, smoothstep } from "@/lib/math";
 import { offsetPoint } from "@/lib/route";
 import { routeT } from "@/lib/timeline";
@@ -15,6 +17,9 @@ import { routeT } from "@/lib/timeline";
 interface Props {
   reducedMotion: boolean;
 }
+
+/** Squared distance, in metres, below which the shot counts as arrived. */
+const SETTLED_SQ = 0.02 * 0.02;
 
 /**
  * The only thing that moves the camera.
@@ -33,6 +38,8 @@ export function CameraController({ reducedMotion }: Props) {
       current: new THREE.Vector3(),
       currentLook: new THREE.Vector3(),
       anchor: new THREE.Vector3(),
+      eye: new THREE.Vector3(),
+      focus: new THREE.Vector3(),
       tmp: new THREE.Vector3(),
     }),
     [],
@@ -135,10 +142,6 @@ export function CameraController({ reducedMotion }: Props) {
       back += carState.speed * 1.8;
     }
 
-    // The panel sits on the left, so bias the whole rig to keep the car clear
-    // of it. Dropped during the landing orbit, which has no panel.
-    if (mutable.phase === "driving") side += CAMERA.compositionBias;
-
     // --- Damp, in the car's frame of reference --------------------------
     //
     // Damping a world-space position makes the lag proportional to speed, so a
@@ -159,6 +162,59 @@ export function CameraController({ reducedMotion }: Props) {
       v.lookAt.set(0, lookUp, lookAhead);
     }
 
+    // --- Read the board on the building the car has stopped at --------------
+    //
+    // Every word in the world is painted on a facade, so near a stop the shot
+    // turns to that board: the camera stands off along the board's normal, just
+    // far enough for the board to fit the frame, and eases back to the mode's
+    // own shot between stops.
+    if (mutable.phase === "driving") {
+      const b = CAMERA.board;
+      let shot: Viewpoint | null = null;
+      let focus = 0;
+      for (const vp of VIEWPOINTS) {
+        // Square on the board around the stop itself, easing out towards the edges.
+        const f = smoothstep((1 - Math.abs(p - vp.at) / vp.radius) * b.hold);
+        if (f > focus) {
+          focus = f;
+          shot = vp;
+        }
+      }
+
+      if (shot && focus > 0.001) {
+        const aspect = (camera as THREE.PerspectiveCamera).aspect || 1;
+        const tanHalf = Math.tan(THREE.MathUtils.degToRad(CAMERA.fov / 2));
+        const fitHeight = shot.height / (2 * tanHalf * b.fillY);
+        const fitWidth = (a: number) => shot.width / (2 * tanHalf * a * b.fillX);
+        // A portrait screen would otherwise back the camera into the buildings
+        // across the road. Stand off no further than a widescreen shot would
+        // and, if the board is then wider than the frame, slide across it as
+        // the visitor scrolls through the stop.
+        const limit = Math.max(fitHeight, fitWidth(b.referenceAspect)) * b.maxStandOff;
+        const distance = Math.max(fitHeight, Math.min(fitWidth(aspect), limit));
+        const overflow = Math.max(0, shot.width - 2 * tanHalf * aspect * distance * b.fillX);
+        const slide = clamp((p - shot.at) / (shot.radius * 0.5), -1, 1) * (overflow / 2);
+
+        v.focus.copy(shot.target).addScaledVector(shot.across, slide);
+        v.eye.copy(v.focus).addScaledVector(shot.normal, distance);
+        v.eye.y += shot.lift;
+
+        // Blend in the car's frame, where the damping happens.
+        v.tmp.subVectors(v.eye, car);
+        v.desired.set(
+          lerp(v.desired.x, v.tmp.dot(right), focus),
+          lerp(v.desired.y, v.tmp.y, focus),
+          lerp(v.desired.z, v.tmp.dot(forward), focus),
+        );
+        v.tmp.subVectors(v.focus, car);
+        v.lookAt.set(
+          lerp(v.lookAt.x, v.tmp.dot(right), focus),
+          lerp(v.lookAt.y, v.tmp.y, focus),
+          lerp(v.lookAt.z, v.tmp.dot(forward), focus),
+        );
+      }
+    }
+
     if (first.current) {
       v.current.copy(v.desired);
       v.currentLook.copy(v.lookAt);
@@ -173,6 +229,10 @@ export function CameraController({ reducedMotion }: Props) {
       v.currentLook.y = damp(v.currentLook.y, v.lookAt.y, lookLambda, dt);
       v.currentLook.z = damp(v.currentLook.z, v.lookAt.z, lookLambda, dt);
     }
+
+    cameraState.settling =
+      v.current.distanceToSquared(v.desired) > SETTLED_SQ ||
+      v.currentLook.distanceToSquared(v.lookAt) > SETTLED_SQ;
 
     // Back to world space against the car's current transform.
     v.tmp

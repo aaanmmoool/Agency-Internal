@@ -13,6 +13,8 @@ import {
 
 interface Props {
   shadows: boolean;
+  /** Texture pixels per metre for the text painted on each building. */
+  signDensity: number;
 }
 
 /**
@@ -21,17 +23,17 @@ interface Props {
  * These are static structures — they mount once and never re-render, so there
  * is no benefit to splitting them further.
  */
-export default function Districts({ shadows }: Props) {
+export default function Districts({ shadows, signDensity }: Props) {
   useEffect(() => markReady("projects"), []);
 
   return (
     <>
-      <Headquarters shadows={shadows} />
-      <ExperienceDistrict shadows={shadows} />
-      <ProjectDistrict shadows={shadows} />
-      <Interchange shadows={shadows} />
-      <Checkpoints shadows={shadows} />
-      <Destination shadows={shadows} />
+      <Headquarters shadows={shadows} signDensity={signDensity} />
+      <ExperienceDistrict shadows={shadows} signDensity={signDensity} />
+      <ProjectDistrict shadows={shadows} signDensity={signDensity} />
+      <Interchange shadows={shadows} signDensity={signDensity} />
+      <Checkpoints shadows={shadows} signDensity={signDensity} />
+      <Destination shadows={shadows} signDensity={signDensity} />
     </>
   );
 }

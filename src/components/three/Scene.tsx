@@ -72,7 +72,7 @@ export function Scene({ quality, reducedMotion }: Props) {
       {deferred && (
         <Suspense fallback={null}>
           <City quality={quality} />
-          <Districts shadows={quality.shadows} />
+          <Districts shadows={quality.shadows} signDensity={quality.signDensity} />
         </Suspense>
       )}
     </>

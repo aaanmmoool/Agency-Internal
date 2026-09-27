@@ -19,11 +19,9 @@ export interface Anchor {
 export const HQ: Anchor = { at: 0.135, lateral: 23 };
 
 /*
-  Every mission destination stands on the right-hand side of the road.
-
-  The mission panel occupies the left of the viewport on desktop, so a landmark
-  placed on the left is framed behind it. Varying the set-back distance gives
-  the district its variety instead.
+  Every mission destination stands on the right-hand side of the road, facing
+  back across it, so the camera always reads a facade from the same side.
+  Varying the set-back distance gives the district its variety instead.
 */
 export const PROJECT_DISTANCES = [19, 25, 21, 27] as const;
 
@@ -40,8 +38,15 @@ export const LANDMARK_ANCHORS: Anchor[] = experienceLandmarks.map((l, i) => ({
 export const INTERCHANGE: Anchor = { at: serviceChoiceAt, lateral: 0 };
 /** Lateral spread of the five service routes at the interchange. */
 export const SERVICE_SPREAD = [-22, -11, 0, 11, 22];
+/** Metres past the interchange centre where the service gates stand. */
+export const SERVICE_GATE_AHEAD = 13;
 
 export const CHECKPOINT_ANCHORS: Anchor[] = processStops.map((at) => ({ at, lateral: 0 }));
+/**
+ * Metres each gantry stands beyond its stop. The car eases off at the stop, so
+ * this puts the board in front of the windscreen rather than overhead.
+ */
+export const CHECKPOINT_LEAD = 7;
 
 /**
  * Set back from the end of the route, not on it: the car has to still be

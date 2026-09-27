@@ -26,6 +26,8 @@ export interface QualitySettings {
   roadSegments: number;
   /** Enable the cheap additive headlight cone + brake glow sprites. */
   carEffects: boolean;
+  /** Texture pixels per world metre for the text painted on buildings. */
+  signDensity: number;
 }
 
 const HIGH: QualitySettings = {
@@ -40,6 +42,7 @@ const HIGH: QualitySettings = {
   counts: { buildings: 150, trees: 160, streetLights: 84, signs: 26, barriers: 190, windows: 900 },
   roadSegments: 900,
   carEffects: true,
+  signDensity: 96,
 };
 
 const MEDIUM: QualitySettings = {
@@ -54,6 +57,7 @@ const MEDIUM: QualitySettings = {
   counts: { buildings: 96, trees: 90, streetLights: 52, signs: 22, barriers: 110, windows: 420 },
   roadSegments: 560,
   carEffects: true,
+  signDensity: 72,
 };
 
 const LOW: QualitySettings = {
@@ -68,6 +72,7 @@ const LOW: QualitySettings = {
   counts: { buildings: 54, trees: 44, streetLights: 28, signs: 16, barriers: 0, windows: 0 },
   roadSegments: 320,
   carEffects: false,
+  signDensity: 52,
 };
 
 export const QUALITY: Record<QualityTier, QualitySettings> = {

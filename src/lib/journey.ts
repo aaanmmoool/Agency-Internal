@@ -1,5 +1,5 @@
 import type { MissionId } from "@/types";
-import { experienceLandmarks, missionAt, missions, processStops, projectStops, serviceChoiceAt, xpAt } from "@/data/missions";
+import { missionAt, missions, xpAt } from "@/data/missions";
 import { clamp } from "./math";
 
 /**
@@ -8,8 +8,8 @@ import { clamp } from "./math";
  * `mutable` is read every frame inside the render loop and is deliberately NOT
  * React state — writing to it never re-renders anything. React subscribes to
  * `snapshot`, which is only republished when a *discrete* value changes
- * (mission, open panel, rounded XP), so the HUD updates a few times per journey
- * rather than sixty times per second.
+ * (mission, whole-percent progress, rounded XP), so the HUD updates a few
+ * times per journey rather than sixty times per second.
  */
 
 export type Phase = "loading" | "landing" | "driving";
@@ -57,39 +57,12 @@ export interface JourneySnapshot {
   /** Rounded to whole percent — this is what the HUD renders. */
   percent: number;
   xp: number;
-  /** Index into `projects`, or -1 when no case study is open. */
-  activeProject: number;
-  /** Index into `processSteps`, or -1. */
-  activeStep: number;
-  /** Id from `experienceLandmarks`, or null. */
-  activeLandmark: string | null;
-  serviceChoiceOpen: boolean;
-  selectedService: string | null;
   complete: boolean;
-}
-
-const PROJECT_WINDOW = 0.026;
-const PROCESS_WINDOW = 0.014;
-const LANDMARK_WINDOW = 0.022;
-const SERVICE_WINDOW = 0.05;
-
-function nearestIndex(p: number, stops: number[], window: number): number {
-  let best = -1;
-  let bestD = window;
-  for (let i = 0; i < stops.length; i++) {
-    const d = Math.abs(p - stops[i]);
-    if (d < bestD) {
-      bestD = d;
-      best = i;
-    }
-  }
-  return best;
 }
 
 function computeSnapshot(): JourneySnapshot {
   const p = clamp(mutable.smooth);
   const mission = missionAt(p);
-  const landmark = experienceLandmarks.find((l) => Math.abs(p - l.at) < LANDMARK_WINDOW);
   return {
     phase: mutable.phase,
     missionId: mission.id,
@@ -98,11 +71,6 @@ function computeSnapshot(): JourneySnapshot {
     district: mission.district,
     percent: Math.round(p * 100),
     xp: Math.round(xpAt(p) / XP_STEP) * XP_STEP,
-    activeProject: mission.id === "projects" ? nearestIndex(p, projectStops, PROJECT_WINDOW) : -1,
-    activeStep: mission.id === "process" ? nearestIndex(p, processStops, PROCESS_WINDOW) : -1,
-    activeLandmark: mission.id === "experience" && landmark ? landmark.id : null,
-    serviceChoiceOpen: Math.abs(p - serviceChoiceAt) < SERVICE_WINDOW,
-    selectedService: mutable.selectedService,
     complete: p > 0.985,
   };
 }
@@ -116,11 +84,6 @@ function changed(a: JourneySnapshot, b: JourneySnapshot): boolean {
     a.missionId !== b.missionId ||
     a.percent !== b.percent ||
     a.xp !== b.xp ||
-    a.activeProject !== b.activeProject ||
-    a.activeStep !== b.activeStep ||
-    a.activeLandmark !== b.activeLandmark ||
-    a.serviceChoiceOpen !== b.serviceChoiceOpen ||
-    a.selectedService !== b.selectedService ||
     a.complete !== b.complete
   );
 }
@@ -150,9 +113,9 @@ export function setPhase(phase: Phase): void {
   publish();
 }
 
+/** Pick a service route at the interchange; the car steers towards its gate. */
 export function setSelectedService(id: string | null): void {
   mutable.selectedService = id;
-  publish();
 }
 
 /** Jump the journey to a timeline position (used by keyboard and skip links). */

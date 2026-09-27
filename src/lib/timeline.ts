@@ -1,4 +1,4 @@
-import { processStops, projectStops, serviceChoiceAt } from "@/data/missions";
+import { experienceLandmarks, processStops, projectStops, serviceChoiceAt } from "@/data/missions";
 import { clamp } from "./math";
 
 /**
@@ -14,6 +14,7 @@ import { clamp } from "./math";
 /** Points where the car eases off, with the strength and width of each slowdown. */
 const SLOWDOWNS: { at: number; strength: number; width: number }[] = [
   { at: 0.13, strength: 0.62, width: 0.03 }, // headquarters
+  ...experienceLandmarks.map((l) => ({ at: l.at, strength: 0.5, width: 0.012 })),
   ...projectStops.map((at) => ({ at, strength: 0.7, width: 0.02 })),
   { at: serviceChoiceAt, strength: 0.68, width: 0.028 }, // interchange
   ...processStops.map((at) => ({ at, strength: 0.4, width: 0.009 })),

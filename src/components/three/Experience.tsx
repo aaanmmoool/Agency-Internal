@@ -5,6 +5,8 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { CAMERA } from "@/config/scene";
 import type { QualitySettings } from "@/config/quality";
+import { cameraState } from "@/lib/cameraState";
+import { carState } from "@/lib/carState";
 import { mutable } from "@/lib/journey";
 import { Scene } from "./Scene";
 import { PerfMonitor } from "./Perf/PerfMonitor";
@@ -53,8 +55,9 @@ export function Experience({ quality, reducedMotion }: Props) {
 /**
  * Switches between continuous and demand rendering.
  *
- * Continuous while the landing shot is orbiting or the journey is in motion;
- * demand once everything has settled, which drops a parked scene to zero GPU
+ * Continuous while the landing shot is orbiting, the journey is in motion, the
+ * car is changing lane or the camera is still easing into a shot; demand once
+ * everything has settled, which drops a parked scene to zero GPU
  * work. Any `invalidate()` from the journey driver runs one frame, which is
  * enough for this to notice motion and switch back.
  */
@@ -71,7 +74,13 @@ function FrameloopManager() {
   useFrame(() => {
     const warming = performance.now() < warmup.current;
     const want: "always" | "demand" =
-      warming || mutable.phase !== "driving" || mutable.moving ? "always" : "demand";
+      warming ||
+      mutable.phase !== "driving" ||
+      mutable.moving ||
+      carState.changingLane ||
+      cameraState.settling
+        ? "always"
+        : "demand";
 
     if (want !== current.current) {
       current.current = want;

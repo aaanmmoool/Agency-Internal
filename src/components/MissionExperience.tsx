@@ -6,7 +6,6 @@ import { StaticContent } from "@/components/sections/StaticContent";
 import { Hud } from "@/components/ui/Hud";
 import { LandingScreen } from "@/components/ui/LandingScreen";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
-import { MissionOverlay } from "@/components/ui/MissionOverlay";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { PerfOverlay } from "@/components/ui/PerfOverlay";
 import { useHydrated } from "@/hooks/useHydrated";
@@ -141,7 +140,6 @@ export function MissionExperience() {
           </div>
 
           <Hud />
-          <MissionOverlay />
 
           <LandingScreen
             visible={!started}

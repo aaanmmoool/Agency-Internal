@@ -41,7 +41,7 @@ src/
   app/            route, metadata, robots, sitemap, generated OG card
   components/
     three/        the 3D layer — Car, Camera, World, Perf
-    ui/           HUD, mission panels, loading and landing screens
+    ui/           HUD, loading and landing screens
     sections/     the static HTML document
   config/         scene constants, quality tiers, world layout, site identity
   data/           team, projects, services, process, missions
@@ -54,7 +54,7 @@ src/
 One value drives everything. `useScrollJourney` attaches a single ScrollTrigger to
 a tall scroll track and writes normalised progress into `lib/journey.ts`. A single
 rAF loop damps it and publishes to React **only when a discrete value changes** —
-the mission, the whole-percent progress, which case study is open. The HUD
+the mission, the whole-percent progress, the XP total. The HUD
 re-renders a handful of times per journey; the 3D scene reads the mutable value
 directly inside `useFrame` and never re-renders at all.
 
@@ -71,6 +71,21 @@ tree and every sign is positioned relative to it, so moving a waypoint moves the
 city. `lib/worldGen.ts` produces deterministic transform arrays from a fixed seed;
 `InstancedField` buckets them into spatial cells so frustum culling can reject the
 parts of the city behind the camera.
+
+### The signage
+
+There is no HTML over the world: everything the visitor reads is painted onto the
+buildings. `lib/boardTexture.ts` lays content out in world metres and draws it once
+into a canvas texture in the page's own typeface; `World/facades.ts` decides what
+each building says, from the same `data/` the text version reads. Each board is one
+unlit quad and one draw call.
+
+`lib/landmarkLayout.ts` is the single source for where every landmark and board
+sits. The buildings are drawn from it, and the camera reads the same numbers: near
+each stop it stands off along the board's normal, just far enough for the board to
+fit the frame, so the text is square to the screen and readable. On a narrow screen
+it stands no further back than a widescreen shot would and slides across a wide
+board as you scroll through the stop instead.
 
 ### The camera
 

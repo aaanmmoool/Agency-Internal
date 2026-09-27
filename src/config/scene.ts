@@ -16,6 +16,19 @@ export const COLORS = {
   brake: "#FF4D4D",
 } as const;
 
+/**
+ * Facade signage palette. Mirrors the document's design tokens in globals.css,
+ * so text painted on a building matches the text version of the site.
+ */
+export const BOARD = {
+  surface: "rgba(11, 13, 19, 0.9)",
+  edge: "#1E2230",
+  edgeStrong: "#2B3143",
+  ink: "#EEF1F7",
+  muted: "#A7AFC2",
+  faint: "#747C90",
+} as const;
+
 export const CAMERA = {
   fov: 42,
   near: 0.5,
@@ -33,10 +46,22 @@ export const CAMERA = {
   positionLambda: 3.4,
   targetLambda: 4.2,
   /**
-   * Constant leftward camera offset, which puts the car right of centre and
-   * clear of the mission panel that occupies the left of the viewport.
+   * Framing for the board on the building at each stop. `hold` widens the part
+   * of each stop where the shot sits square on the board, `fillX`/`fillY` are
+   * the share of the frame the board is sized to (leaving the HUD clear), and
+   * `lift` raises the camera above the board's centre line so the view looks
+   * slightly down onto it — unless the board sets its own `eyeHeight`.
+   * `maxStandOff` caps how much further back than on a `referenceAspect`
+   * screen the camera may stand to fit a wide board into a narrow one.
    */
-  compositionBias: -1,
+  board: {
+    hold: 1.8,
+    fillX: 0.74,
+    fillY: 0.8,
+    lift: 0.8,
+    referenceAspect: 16 / 10,
+    maxStandOff: 1.15,
+  },
 } as const;
 
 export const CAR = {

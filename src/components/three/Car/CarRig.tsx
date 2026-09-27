@@ -177,6 +177,7 @@ export function CarRig({ effects, shadows, reducedMotion }: Props) {
     carState.steer = a.steer / CAR.maxSteer;
     carState.speed = clamp(a.speed / 34);
     carState.brake = a.brake;
+    carState.changingLane = Math.abs(laneTarget - a.lane) > 0.02;
 
     // No-op unless audio has been enabled from a user gesture.
     updateEngine(carState.speed, clamp(a.speed / 22));
