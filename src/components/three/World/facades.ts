@@ -4,6 +4,7 @@ import { experienceLandmarks, missionById } from "@/data/missions";
 import { processSteps } from "@/data/process";
 import type { BoardSpec } from "@/lib/boardTexture";
 import type { ExperienceLandmark, ProcessStep, Project, Service } from "@/types";
+import { services } from "@/data/services";
 import { team } from "@/data/team";
 
 /**
@@ -104,20 +105,29 @@ export function projectBoard(project: Project, { width, height }: Size): BoardSp
 }
 
 export function serviceBoard(service: Service, { width, height }: Size): BoardSpec {
+  const position = services.indexOf(service) + 1;
+
   return {
     width,
     height,
     unit: 0.3,
     padding: 1.5,
     blocks: [
-      { kind: "eyebrow", text: missionLabel("services"), color: service.accent },
+      {
+        kind: "eyebrow",
+        text: `${missionLabel("services")} · ${String(position).padStart(2, "0")}/${String(services.length).padStart(2, "0")}`,
+        color: service.accent,
+      },
       { kind: "heading", text: service.title, scale: 0.72 },
       { kind: "text", text: service.summary },
       { kind: "eyebrow", text: "What you get" },
       { kind: "list", items: service.deliverables },
       { kind: "tags", items: service.stack, color: service.accent },
       { kind: "gap", size: 0.3 },
-      { kind: "eyebrow", text: "Select to take this route" },
+      {
+        kind: "eyebrow",
+        text: position < services.length ? "Scroll to clear the road" : "Scroll on to drive",
+      },
     ],
   };
 }

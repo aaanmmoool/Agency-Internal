@@ -34,8 +34,7 @@ export type CameraMode =
   | "cinematic"
   | "follow"
   | "destination"
-  | "showcase"
-  | "orbit";
+  | "showcase";
 
 export interface SocialLink {
   label: string;

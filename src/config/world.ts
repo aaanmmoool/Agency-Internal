@@ -1,4 +1,4 @@
-import { experienceLandmarks, processStops, projectStops, serviceChoiceAt } from "@/data/missions";
+import { experienceLandmarks, processStops, projectStops, serviceHold } from "@/data/missions";
 
 /**
  * Where every landmark sits in the world.
@@ -35,11 +35,9 @@ export const LANDMARK_ANCHORS: Anchor[] = experienceLandmarks.map((l, i) => ({
   lateral: i % 2 === 0 ? 18 : 23,
 }));
 
-export const INTERCHANGE: Anchor = { at: serviceChoiceAt, lateral: 0 };
-/** Lateral spread of the five service routes at the interchange. */
-export const SERVICE_SPREAD = [-22, -11, 0, 11, 22];
-/** Metres past the interchange centre where the service gates stand. */
-export const SERVICE_GATE_AHEAD = 13;
+export const INTERCHANGE: Anchor = { at: (serviceHold[0] + serviceHold[1]) / 2, lateral: 0 };
+/** Metres ahead of the car's resting point where each service card stands. */
+export const SERVICE_CARD_AHEAD = 7;
 
 export const CHECKPOINT_ANCHORS: Anchor[] = processStops.map((at) => ({ at, lateral: 0 }));
 /**

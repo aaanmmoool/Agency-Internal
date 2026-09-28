@@ -37,7 +37,6 @@ export const CAMERA = {
   cinematic: { back: 15, up: 4.4, lookAhead: 15, lookUp: 1.3 },
   destination: { back: 16.5, up: 7.2, lookAhead: 7, lookUp: 2.0 },
   showcase: { back: 13.5, up: 5.6, lookAhead: 5, lookUp: 1.8, side: 7 },
-  orbit: { back: 15, up: 9.5, lookAhead: 9, lookUp: 0.6 },
   /**
    * Damping rates (higher = tighter). These act on the camera's offset from the
    * car, not on a world position, so they control how quickly the shot changes

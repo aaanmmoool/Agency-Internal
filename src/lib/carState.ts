@@ -19,6 +19,4 @@ export const carState = {
   speed: 0,
   /** 0..1 braking amount, drives the brake lights. */
   brake: 0,
-  /** True while the car is still pulling across to a newly picked lane. */
-  changingLane: false,
 };

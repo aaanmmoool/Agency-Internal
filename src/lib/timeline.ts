@@ -1,5 +1,5 @@
-import { experienceLandmarks, processStops, projectStops, serviceChoiceAt } from "@/data/missions";
-import { clamp } from "./math";
+import { experienceLandmarks, processStops, projectStops, serviceHold } from "@/data/missions";
+import { clamp, lerp, smoothstep } from "./math";
 
 /**
  * Maps scroll progress to position along the route.
@@ -16,9 +16,16 @@ const SLOWDOWNS: { at: number; strength: number; width: number }[] = [
   { at: 0.13, strength: 0.62, width: 0.03 }, // headquarters
   ...experienceLandmarks.map((l) => ({ at: l.at, strength: 0.5, width: 0.012 })),
   ...projectStops.map((at) => ({ at, strength: 0.7, width: 0.02 })),
-  { at: serviceChoiceAt, strength: 0.68, width: 0.028 }, // interchange
   ...processStops.map((at) => ({ at, strength: 0.4, width: 0.009 })),
   { at: 0.978, strength: 0.8, width: 0.024 }, // final destination
+];
+
+/**
+ * Ranges where the car barely moves: something is standing in the road. The
+ * speed eases down over `edge` before the range and back up after it.
+ */
+const HOLDS: { from: number; to: number; speed: number; edge: number }[] = [
+  { from: serviceHold[0], to: serviceHold[1], speed: 0.08, edge: 0.012 }, // service cards
 ];
 
 const SAMPLES = 1024;
@@ -31,7 +38,13 @@ export function speedProfile(p: number): number {
     const d = (p - s.at) / s.width;
     speed -= s.strength * Math.exp(-d * d);
   }
-  return Math.max(speed, MIN_SPEED);
+  speed = Math.max(speed, MIN_SPEED);
+  for (const h of HOLDS) {
+    const inside =
+      smoothstep((p - (h.from - h.edge)) / h.edge) * (1 - smoothstep((p - h.to) / h.edge));
+    speed = lerp(speed, h.speed, inside);
+  }
+  return speed;
 }
 
 const AVERAGE_SPEED = (() => {

@@ -1,4 +1,7 @@
 import type { ExperienceLandmark, Mission, MissionId } from "@/types";
+import { services } from "./services";
+
+const SERVICE_COUNT = services.length;
 
 /**
  * The journey timeline. Every mission owns a contiguous slice of the global
@@ -54,7 +57,7 @@ export const missions: Mission[] = [
     start: 0.66,
     end: 0.8,
     xp: 180,
-    camera: "orbit",
+    camera: "follow",
   },
   {
     id: "process",
@@ -116,8 +119,17 @@ export const projectStops: number[] = [0.435, 0.5, 0.565, 0.63];
 /** Timeline positions for the five delivery checkpoints. */
 export const processStops: number[] = [0.81, 0.835, 0.86, 0.885, 0.91];
 
-/** Timeline position where the service interchange offers a route choice. */
-export const serviceChoiceAt = 0.71;
+/**
+ * Scroll range where the service cards hold the car. The cards rise out of the
+ * road on the approach, and the car only creeps while they stand in its way.
+ */
+export const serviceHold: [number, number] = [0.682, 0.782];
+
+/** Where the car rests in front of each service card, one per service. */
+export const serviceStops: number[] = Array.from({ length: SERVICE_COUNT }, (_, i) => {
+  const [from, to] = serviceHold;
+  return from + ((i + 0.5) * (to - from)) / SERVICE_COUNT;
+});
 
 export const experienceLandmarks: ExperienceLandmark[] = [
   {

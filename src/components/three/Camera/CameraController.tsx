@@ -5,12 +5,12 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { CAMERA } from "@/config/scene";
 import { FINAL_BUILDING, HQ, PROJECT_ANCHORS } from "@/config/world";
-import { missionAt, projectStops, serviceChoiceAt } from "@/data/missions";
+import { missionAt, projectStops } from "@/data/missions";
 import { cameraState } from "@/lib/cameraState";
 import { carState } from "@/lib/carState";
 import { mutable } from "@/lib/journey";
 import { VIEWPOINTS, type Viewpoint } from "@/lib/landmarkLayout";
-import { clamp, damp, lerp, proximity, smoothstep } from "@/lib/math";
+import { clamp, damp, invLerp, lerp, proximity, smoothstep } from "@/lib/math";
 import { offsetPoint } from "@/lib/route";
 import { routeT } from "@/lib/timeline";
 
@@ -123,13 +123,6 @@ export function CameraController({ reducedMotion }: Props) {
         lookOverride = v.anchor;
         lookBlend = focus * 0.78;
       }
-    } else if (mode === "orbit") {
-      const o = CAMERA.orbit;
-      const focus = proximity(p, serviceChoiceAt, 0.06);
-      back = o.back + focus * 5;
-      up = o.up + focus * 9;
-      lookAhead = o.lookAhead + focus * 16;
-      lookUp = o.lookUp;
     } else {
       const f = CAMERA.follow;
       back = f.back;
@@ -191,9 +184,14 @@ export function CameraController({ reducedMotion }: Props) {
         // and, if the board is then wider than the frame, slide across it as
         // the visitor scrolls through the stop.
         const limit = Math.max(fitHeight, fitWidth(b.referenceAspect)) * b.maxStandOff;
-        const distance = Math.max(fitHeight, Math.min(fitWidth(aspect), limit));
+        const distance = Math.max(
+          shot.minDistance,
+          fitHeight,
+          Math.min(fitWidth(aspect), limit),
+        );
         const overflow = Math.max(0, shot.width - 2 * tanHalf * aspect * distance * b.fillX);
-        const slide = clamp((p - shot.at) / (shot.radius * 0.5), -1, 1) * (overflow / 2);
+        const across = invLerp(shot.slide[0], shot.slide[1], p) * 2 - 1;
+        const slide = across * (overflow / 2);
 
         v.focus.copy(shot.target).addScaledVector(shot.across, slide);
         v.eye.copy(v.focus).addScaledVector(shot.normal, distance);

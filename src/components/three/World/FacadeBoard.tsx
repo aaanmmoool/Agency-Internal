@@ -11,24 +11,13 @@ import {
   type BoardSpec,
 } from "@/lib/boardTexture";
 
-interface Props {
-  spec: BoardSpec;
-  /** Texture pixels per world metre, from the quality tier. */
-  density: number;
-  position: [number, number, number];
-  rotationY?: number;
-  /** Makes the board a control: pointer cursor on hover, `onSelect` on click. */
-  onSelect?: () => void;
-}
-
 /**
- * Content painted onto a building.
+ * The unlit material a board is drawn with, owning its canvas texture.
  *
- * One unlit quad carrying a canvas texture. It is laid out once — then again
- * only if the page typeface arrives after the first paint — so a board costs a
- * single draw call and never touches React while driving.
+ * Laid out once — then again only if the page typeface arrives after the first
+ * paint. Callers may animate `opacity`; the material is already transparent.
  */
-export function FacadeBoard({ spec, density, position, rotationY = 0, onSelect }: Props) {
+export function useBoardMaterial(spec: BoardSpec, density: number): THREE.MeshBasicMaterial {
   const texture = useMemo(() => createBoardTexture(spec, density), [spec, density]);
 
   const material = useMemo(
@@ -58,6 +47,28 @@ export function FacadeBoard({ spec, density, position, rotationY = 0, onSelect }
   }, [texture, spec, density]);
 
   useEffect(() => () => material.dispose(), [material]);
+
+  return material;
+}
+
+interface Props {
+  spec: BoardSpec;
+  /** Texture pixels per world metre, from the quality tier. */
+  density: number;
+  position: [number, number, number];
+  rotationY?: number;
+  /** Makes the board a control: pointer cursor on hover, `onSelect` on click. */
+  onSelect?: () => void;
+}
+
+/**
+ * Content painted onto a building.
+ *
+ * One unlit quad carrying a canvas texture, so a board costs a single draw call
+ * and never touches React while driving.
+ */
+export function FacadeBoard({ spec, density, position, rotationY = 0, onSelect }: Props) {
+  const material = useBoardMaterial(spec, density);
 
   const handlers = onSelect
     ? {

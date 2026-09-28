@@ -87,10 +87,17 @@ fit the frame, so the text is square to the screen and readable. On a narrow scr
 it stands no further back than a widescreen shot would and slides across a wide
 board as you scroll through the stop instead.
 
+The services are the exception to boards-on-buildings: at the interchange one card
+per service rises out of the road and stands in front of the car. `lib/timeline.ts`
+holds the car to a creep across that stretch of scroll, and each scroll past a card
+sinks it back into the road to reveal the next. The rise and sink are functions of
+scroll position (`serviceCardUp` / `serviceCardGone` in `lib/landmarkLayout.ts`), so
+scrolling back up brings the cards back.
+
 ### The camera
 
 `CameraController` is the only thing that moves the camera. Each mission declares
-a mode (cinematic, follow, destination, showcase, orbit) which resolves to an
+a mode (cinematic, follow, destination, showcase) which resolves to an
 offset in the car's frame of reference. The damping is applied to that **offset**,
 not to a world position — damping a world position makes the lag proportional to
 speed, which strands the camera behind the world on a fast scroll.
@@ -105,7 +112,9 @@ a locally generated environment map — no HDRI download, no post-processing.
 
 ## Accessibility and SEO
 
-The server renders the complete site as ordinary HTML (`components/sections/StaticContent.tsx`).
+The server renders the complete site as ordinary HTML (`components/sections/StaticContent.tsx`),
+laid out as the same journey: a route map drawn from the world's own waypoints
+(`config/waypoints.ts`, without loading Three.js), then one section per stop.
 The 3D world is layered over it on the client only when WebGL is available and the
 visitor has not opted out. That ordering is deliberate: without JavaScript, without
 WebGL, or for a crawler that does not execute scripts, the document *is* the site.

@@ -4,12 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { CAR, COLORS } from "@/config/scene";
-import { SERVICE_SPREAD } from "@/config/world";
-import { serviceChoiceAt } from "@/data/missions";
-import { services } from "@/data/services";
 import { createCarGeometries, createCarMaterials, disposeCar } from "@/lib/carMaterials";
 import { carState } from "@/lib/carState";
-import { clamp, damp, dampAngle, proximity } from "@/lib/math";
+import { clamp, damp, dampAngle } from "@/lib/math";
 import { mutable } from "@/lib/journey";
 import { updateEngine } from "@/lib/audio";
 import { markReady } from "@/lib/loading";
@@ -67,7 +64,6 @@ export function CarRig({ effects, shadows, reducedMotion }: Props) {
     brake: 0,
     speed: 0,
     lastSpeed: 0,
-    lane: CAR.laneOffset as number,
     initialised: false,
   });
 
@@ -84,18 +80,8 @@ export function CarRig({ effects, shadows, reducedMotion }: Props) {
     tangentAt(t, scratch.tangent);
     scratch.right.crossVectors(scratch.tangent, UP).normalize();
 
-    // Lane position: normally the right-hand lane, but at the interchange the
-    // car pulls across towards whichever service route the visitor picked.
-    const chosen = mutable.selectedService
-      ? services.findIndex((service) => service.id === mutable.selectedService)
-      : -1;
-    const atInterchange = proximity(mutable.smooth, serviceChoiceAt, 0.1);
-    const laneTarget =
-      chosen >= 0
-        ? CAR.laneOffset + (SERVICE_SPREAD[chosen] - CAR.laneOffset) * atInterchange
-        : CAR.laneOffset;
-    a.lane = damp(a.lane, laneTarget, reducedMotion ? 60 : 2.2, dt);
-    scratch.position.addScaledVector(scratch.right, a.lane);
+    // The car keeps to the right-hand lane.
+    scratch.position.addScaledVector(scratch.right, CAR.laneOffset);
 
     // --- Position & heading -------------------------------------------------
     const heading = Math.atan2(scratch.tangent.x, scratch.tangent.z);
@@ -122,8 +108,7 @@ export function CarRig({ effects, shadows, reducedMotion }: Props) {
 
     // --- Steering -----------------------------------------------------------
     const curvature = curvatureAt(t);
-    const laneRate = (laneTarget - a.lane) * 0.06;
-    const steerTarget = clamp(-curvature * 2.4 + laneRate, -1, 1) * CAR.maxSteer;
+    const steerTarget = clamp(-curvature * 2.4, -1, 1) * CAR.maxSteer;
     a.steer = damp(a.steer, reducedMotion ? 0 : steerTarget, 7, dt);
 
     for (let i = 0; i < 4; i++) {
@@ -177,7 +162,6 @@ export function CarRig({ effects, shadows, reducedMotion }: Props) {
     carState.steer = a.steer / CAR.maxSteer;
     carState.speed = clamp(a.speed / 34);
     carState.brake = a.brake;
-    carState.changingLane = Math.abs(laneTarget - a.lane) > 0.02;
 
     // No-op unless audio has been enabled from a user gesture.
     updateEngine(carState.speed, clamp(a.speed / 22));

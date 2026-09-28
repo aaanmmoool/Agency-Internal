@@ -24,8 +24,6 @@ export interface JourneyMutable {
   /** True while the journey is meaningfully in motion. */
   moving: boolean;
   phase: Phase;
-  /** Set when a service route is picked at the interchange. */
-  selectedService: string | null;
   /** Elapsed seconds since the mission started; used for ambient motion. */
   elapsed: number;
 }
@@ -36,7 +34,6 @@ export const mutable: JourneyMutable = {
   velocity: 0,
   moving: false,
   phase: "loading",
-  selectedService: null,
   elapsed: 0,
 };
 
@@ -113,11 +110,6 @@ export function setPhase(phase: Phase): void {
   publish();
 }
 
-/** Pick a service route at the interchange; the car steers towards its gate. */
-export function setSelectedService(id: string | null): void {
-  mutable.selectedService = id;
-}
-
 /** Jump the journey to a timeline position (used by keyboard and skip links). */
 export function requestProgress(t: number): void {
   mutable.target = clamp(t);
@@ -135,7 +127,6 @@ export function resetJourney(): void {
   mutable.smooth = 0;
   mutable.velocity = 0;
   mutable.moving = false;
-  mutable.selectedService = null;
   mutable.elapsed = 0;
   publish();
 }

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { invalidate } from "@react-three/fiber";
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { CONTACT } from "@/config/site";
 import { experienceLandmarks } from "@/data/missions";
@@ -10,10 +10,18 @@ import { projects } from "@/data/projects";
 import { services } from "@/data/services";
 import { team } from "@/data/team";
 import { useDisposable } from "@/hooks/useDisposable";
-import { mutable, setSelectedService } from "@/lib/journey";
-import { BOARDS, FRAMES, gateFrame, type BoardPlacement } from "@/lib/landmarkLayout";
+import { mutable } from "@/lib/journey";
+import {
+  BOARDS,
+  FRAMES,
+  serviceCardBoard,
+  serviceCardGone,
+  serviceCardUp,
+  type BoardPlacement,
+} from "@/lib/landmarkLayout";
 import { ROAD_HALF_WIDTH } from "@/lib/route";
-import { FacadeBoard } from "./FacadeBoard";
+import type { Service } from "@/types";
+import { FacadeBoard, useBoardMaterial } from "./FacadeBoard";
 import {
   experienceBoard,
   finalBoard,
@@ -317,22 +325,16 @@ export function ProjectDistrict({ shadows, signDensity }: CommonProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Mission 04 — the interchange, where the road splits into service routes.
-
-/** Half the clear width of a service gate. */
-const GATE_POST = 4.2;
+// Mission 04 — the interchange. One card per service rises out of the road and
+// stands in the car's way; each scroll past a card sinks it back into the road.
 
 export function Interchange({ shadows, signDensity }: CommonProps) {
   const m = useStructureMaterials();
-  const accents = useAccentMaterials(services.map((s) => s.accent));
-  const boards = useMemo(() => services.map((s) => serviceBoard(s, BOARDS.service)), []);
-  const face = boardAt(BOARDS.service);
-  const signTop = BOARDS.service.center[1] + BOARDS.service.height / 2;
   const { position, rotationY } = FRAMES.interchange;
 
   return (
     <group>
-      {/* Widened apron under the split */}
+      {/* Widened apron the cards stand on */}
       <group position={position} rotation={[0, rotationY, 0]}>
         <mesh
           position={[0, 0.03, 0]}
@@ -344,55 +346,88 @@ export function Interchange({ shadows, signDensity }: CommonProps) {
         </mesh>
       </group>
 
-      {services.map((service, i) => {
-        const gate = gateFrame(i);
-        // Picking a route steers the car through this gate. One frame is enough
-        // to start the lane change; the frameloop keeps running until it ends.
-        const choose = () => {
-          setSelectedService(mutable.selectedService === service.id ? null : service.id);
-          invalidate();
-        };
+      {services.map((service, i) => (
+        <ServiceCard
+          key={service.id}
+          service={service}
+          index={i}
+          shadows={shadows}
+          signDensity={signDensity}
+        />
+      ))}
+    </group>
+  );
+}
 
-        return (
-          <group key={service.id} position={gate.position} rotation={[0, gate.rotationY, 0]}>
-            {/*
-              Gate uprights and lintel. Wide enough that the car's default lane
-              and the chase camera behind it both pass clear of the posts.
-            */}
-            <mesh position={[-GATE_POST, 4, 0]} material={m.frame} castShadow={shadows}>
-              <boxGeometry args={[0.42, 8, 0.42]} />
-            </mesh>
-            <mesh position={[GATE_POST, 4, 0]} material={m.frame} castShadow={shadows}>
-              <boxGeometry args={[0.42, 8, 0.42]} />
-            </mesh>
-            <mesh position={[0, 8.2, 0]} material={m.shell} castShadow={shadows}>
-              <boxGeometry args={[GATE_POST * 2 + 0.6, 0.8, 0.6]} />
-            </mesh>
-            <mesh position={[0, 7.5, -0.34]} material={accents.get(service.accent)}>
-              <boxGeometry args={[GATE_POST * 2 - 0.4, 0.14, 0.08]} />
-            </mesh>
+interface ServiceCardProps extends CommonProps {
+  service: Service;
+  index: number;
+}
 
-            {/* The route's sign, on posts rising from the lintel behind it. */}
-            <mesh position={[-GATE_POST, (8.6 + signTop) / 2, 0.12]} material={m.frame}>
-              <boxGeometry args={[0.3, signTop - 8.6, 0.3]} />
-            </mesh>
-            <mesh position={[GATE_POST, (8.6 + signTop) / 2, 0.12]} material={m.frame}>
-              <boxGeometry args={[0.3, signTop - 8.6, 0.3]} />
-            </mesh>
-            <mesh position={[0, BOARDS.service.center[1], 0]} material={m.shell} castShadow={shadows}>
-              <boxGeometry args={[BOARDS.service.width + 0.3, BOARDS.service.height + 0.3, 0.3]} />
-            </mesh>
-            <FacadeBoard spec={boards[i]} density={signDensity} {...face} onSelect={choose} />
-            <WorldLabel
-              text={service.title.toUpperCase()}
-              position={[0, BOARDS.service.center[1], 0.3]}
-              width={9}
-              aspect={9}
-              opacity={0.6}
-            />
-          </group>
-        );
-      })}
+function ServiceCard({ service, index, shadows, signDensity }: ServiceCardProps) {
+  const card = useRef<THREE.Group>(null);
+  const spec = useMemo(() => serviceBoard(service, BOARDS.serviceCard), [service]);
+  const face = useBoardMaterial(spec, signDensity);
+  const placement = serviceCardBoard(index);
+  const { position, rotationY } = FRAMES.serviceCards[index];
+
+  const [, cy, cz] = placement.center;
+  const plate = { width: placement.width + 0.3, height: placement.height + 0.3 };
+  // Far enough below the road that the whole card is hidden before it rises.
+  const depth = cy + plate.height / 2 + 0.6;
+
+  // Every card fades on its own, so each owns its materials.
+  const mats = useDisposable(() => ({
+    body: new THREE.MeshStandardMaterial({
+      color: "#1A1F2D",
+      roughness: 0.55,
+      metalness: 0.35,
+      transparent: true,
+    }),
+    edge: new THREE.MeshBasicMaterial({ color: service.accent, toneMapped: false, transparent: true }),
+    slot: new THREE.MeshBasicMaterial({
+      color: service.accent,
+      toneMapped: false,
+      transparent: true,
+      depthWrite: false,
+    }),
+  }));
+
+  useFrame(() => {
+    const g = card.current;
+    if (!g) return;
+    const p = mutable.smooth;
+    const up = serviceCardUp(index, p);
+    const gone = serviceCardGone(index, p);
+    const shown = up * (1 - gone);
+
+    g.visible = shown > 0.002;
+    // Up out of the road on the approach, back down into it once read.
+    g.position.y = -(1 - up) * depth - gone * depth * 0.55;
+    face.opacity = shown;
+    mats.body.opacity = shown;
+    mats.edge.opacity = shown;
+    // The slot in the road lights just before its card breaks the surface.
+    mats.slot.opacity = Math.min(1, up * 3) * (1 - gone) * 0.85;
+  });
+
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      <mesh position={[0, 0.06, 0]} material={mats.slot}>
+        <boxGeometry args={[plate.width + 0.5, 0.02, 0.5]} />
+      </mesh>
+
+      <group ref={card}>
+        <mesh position={[0, cy, 0]} material={mats.body} castShadow={shadows}>
+          <boxGeometry args={[plate.width, plate.height, 0.22]} />
+        </mesh>
+        <mesh position={[0, cy + plate.height / 2 + 0.05, 0]} material={mats.edge}>
+          <boxGeometry args={[plate.width, 0.1, 0.24]} />
+        </mesh>
+        <mesh position={[0, cy, cz]} rotation={[0, Math.PI, 0]} material={face}>
+          <planeGeometry args={[placement.width, placement.height]} />
+        </mesh>
+      </group>
     </group>
   );
 }

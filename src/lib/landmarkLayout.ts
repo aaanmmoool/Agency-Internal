@@ -8,12 +8,18 @@ import {
   INTERCHANGE,
   LANDMARK_ANCHORS,
   PROJECT_ANCHORS,
-  SERVICE_GATE_AHEAD,
-  SERVICE_SPREAD,
+  SERVICE_CARD_AHEAD,
   type Anchor,
 } from "@/config/world";
-import { experienceLandmarks, processStops, projectStops, serviceChoiceAt } from "@/data/missions";
-import { ROUTE_LENGTH, headingAt, offsetPoint, tangentAt } from "./route";
+import {
+  experienceLandmarks,
+  processStops,
+  projectStops,
+  serviceHold,
+  serviceStops,
+} from "@/data/missions";
+import { smoothstep } from "./math";
+import { ROUTE_LENGTH, headingAt, offsetPoint } from "./route";
 import { routeT } from "./timeline";
 
 /**
@@ -80,6 +86,8 @@ export const FRAMES = {
   experience: LANDMARK_ANCHORS.map((a) => roadside(a, EXPERIENCE_TURN)),
   projects: PROJECT_ANCHORS.map((a) => roadside(a)),
   interchange: onRoad(INTERCHANGE),
+  /** Each card stands in the road a little ahead of where the car waits for it. */
+  serviceCards: serviceStops.map((at) => onRoad({ at, lateral: 0 }, SERVICE_CARD_AHEAD)),
   checkpoints: CHECKPOINT_ANCHORS.map((a) => onRoad(a, CHECKPOINT_LEAD)),
   final: roadside(FINAL_BUILDING),
 };
@@ -99,6 +107,8 @@ export interface BoardPlacement {
    * board; otherwise the camera sits just above the board's centre.
    */
   eyeHeight?: number;
+  /** The camera never reads this board from closer than this, in metres. */
+  minStandOff?: number;
 }
 
 export const BOARDS = {
@@ -108,10 +118,17 @@ export const BOARDS = {
   /** The lower part of each tower's glass curtain, under the tower's name. */
   project: { width: 9.6, height: 15, center: [0, 11, 5.5] },
   /**
-   * Carried high over each service gate, facing the approach, so the chase
-   * camera passes beneath it on the way through. Local to the gate.
+   * A service card standing across the road, facing the car. Read from far
+   * enough back that the waiting car stays in the bottom of the shot.
    */
-  service: { width: 9.6, height: 5.8, center: [0, 18.9, -0.18], back: true },
+  serviceCard: {
+    width: 9.6,
+    height: 5.8,
+    center: [0, 3.4, -0.14],
+    back: true,
+    eyeHeight: 4.6,
+    minStandOff: SERVICE_CARD_AHEAD * 2,
+  },
   /** Hung from each gantry, facing the approach, read from the chase camera's height. */
   checkpoint: {
     width: 12.4,
@@ -124,15 +141,35 @@ export const BOARDS = {
   final: { width: 12.2, height: 8.4, center: [0, 9.2, 6.1] },
 } satisfies Record<string, BoardPlacement>;
 
-/**
- * A service gate's frame: across the interchange apron at the same signed
- * lateral offset the car steers to when that route is picked, ahead of centre.
- */
-export function gateFrame(index: number): Frame {
-  const rt = routeT(INTERCHANGE.at);
-  const position = offsetPoint(rt, SERVICE_SPREAD[index], 0);
-  position.addScaledVector(tangentAt(rt, new THREE.Vector3()), SERVICE_GATE_AHEAD);
-  return { position, rotationY: FRAMES.interchange.rotationY };
+// ---------------------------------------------------------------------------
+// Service cards: they rise out of the road before the car arrives, stand in its
+// way, and each one sinks back into the road as the visitor scrolls past it.
+
+const SERVICE_SLOT = (serviceHold[1] - serviceHold[0]) / serviceStops.length;
+/** Scroll distance over which one card rises out of the road. */
+const CARD_RISE = 0.014;
+/** Scroll gap between one card starting to rise and the next. */
+const CARD_STAGGER = 0.003;
+/** Each card behind the front one stands this much higher, so the stack shows. */
+const CARD_STEP_UP = 0.4;
+
+/** The board placement of card `index`, raised for its place in the stack. */
+export function serviceCardBoard(index: number): BoardPlacement {
+  const b = BOARDS.serviceCard;
+  return { ...b, center: [b.center[0], b.center[1] + index * CARD_STEP_UP, b.center[2]] };
+}
+
+/** 0..1: how far card `index` has risen out of the road at scroll `p`. */
+export function serviceCardUp(index: number, p: number): number {
+  const lastDone = serviceHold[0] - 0.004;
+  const start = lastDone - CARD_RISE - (serviceStops.length - 1 - index) * CARD_STAGGER;
+  return smoothstep((p - start) / CARD_RISE);
+}
+
+/** 0..1: how far card `index` has sunk away once the visitor scrolls past it. */
+export function serviceCardGone(index: number, p: number): number {
+  const from = serviceStops[index] + SERVICE_SLOT * 0.15;
+  return smoothstep((p - from) / (SERVICE_SLOT * 0.35));
 }
 
 // ---------------------------------------------------------------------------
@@ -151,11 +188,24 @@ export interface Viewpoint {
   across: THREE.Vector3;
   /** Camera height relative to the board's centre. */
   lift: number;
+  /** Closest the camera may stand to the board. */
+  minDistance: number;
+  /**
+   * Scroll range over which the camera slides from the board's left edge to
+   * its right, when the screen is too narrow to show all of it at once.
+   */
+  slide: [number, number];
   width: number;
   height: number;
 }
 
-function view(frame: Frame, board: BoardPlacement, at: number, radius: number): Viewpoint {
+function view(
+  frame: Frame,
+  board: BoardPlacement,
+  at: number,
+  radius: number,
+  slide: [number, number] = [at - radius / 2, at + radius / 2],
+): Viewpoint {
   const normal = new THREE.Vector3(0, 0, board.back ? -1 : 1).applyAxisAngle(UP, frame.rotationY);
   return {
     at,
@@ -164,25 +214,23 @@ function view(frame: Frame, board: BoardPlacement, at: number, radius: number): 
     normal,
     across: new THREE.Vector3().crossVectors(normal, UP).negate(),
     lift: board.eyeHeight === undefined ? CAMERA.board.lift : board.eyeHeight - board.center[1],
+    minDistance: board.minStandOff ?? 0,
+    slide,
     width: board.width,
     height: board.height,
   };
 }
 
-/** Service boards are read one after another, panning across the interchange. */
-const SERVICE_PAN_STEP = 0.009;
-
 export const VIEWPOINTS: Viewpoint[] = [
   view(FRAMES.hq, BOARDS.hq, HQ.at, 0.06),
   ...experienceLandmarks.map((l, i) => view(FRAMES.experience[i], BOARDS.experience, l.at, 0.02)),
   ...projectStops.map((at, i) => view(FRAMES.projects[i], BOARDS.project, at, 0.03)),
-  ...SERVICE_SPREAD.map((_, i) =>
-    view(
-      gateFrame(i),
-      BOARDS.service,
-      serviceChoiceAt + (i - (SERVICE_SPREAD.length - 1) / 2) * SERVICE_PAN_STEP,
-      SERVICE_PAN_STEP * 1.25,
-    ),
+  // Each card is read while it stands; the shot moves on as it sinks away.
+  ...serviceStops.map((at, i) =>
+    view(FRAMES.serviceCards[i], serviceCardBoard(i), at, SERVICE_SLOT, [
+      at - SERVICE_SLOT / 2,
+      at + SERVICE_SLOT * 0.15,
+    ]),
   ),
   ...processStops.map((at, i) => view(FRAMES.checkpoints[i], BOARDS.checkpoint, at, 0.012)),
   view(FRAMES.final, BOARDS.final, FINAL_BUILDING.at, 0.05),
