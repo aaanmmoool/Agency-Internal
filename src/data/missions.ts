@@ -152,7 +152,7 @@ export const experienceLandmarks: ExperienceLandmark[] = [
     id: "startup",
     label: "Product",
     detail:
-      "Product work at a Europe-based startup, under time pressure, where scope decisions matter more than architecture diagrams.",
+      "Internships at Mea-tec Battery Intelligence, a Europe-based startup, and at Qualimatrix and Venturloop: shipping React and Node.js features in sprints, for real clients.",
     accent: "#8FE3C4",
     at: 0.33,
   },

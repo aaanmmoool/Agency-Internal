@@ -25,6 +25,7 @@ export const CONTACT = {
 
 export const SOCIALS: { label: string; url: string }[] = [
   { label: "GitHub", url: "https://github.com/aaanmmoool" },
+  { label: "LinkedIn", url: "https://www.linkedin.com/in/anmol-singh-09854b251/" },
 ];
 
 /** The landing copy, kept here so the 3D and HTML routes stay in sync. */

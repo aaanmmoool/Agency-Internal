@@ -7,24 +7,42 @@ import type { TeamMember } from "@/types";
  * `achievements` describe work that was actually shipped. Employment at a
  * company is described as employment, not as client work.
  *
- * TODO before launch: Manas's skills and socials, and Anmol's years of
- * experience and startup details from his resume.
+ * Anmol's entry is taken from his resume. TODO before launch: Manas's skills
+ * and socials.
  */
 export const team: TeamMember[] = [
   {
     id: "anmol-singh",
     name: "Anmol Singh",
-    role: "Full-Stack & Web3 Engineer",
-    experience: "Freelance",
-    skills: ["TypeScript", "React", "React Native", "Node.js", "Three.js", "Solidity", "Python", "PostgreSQL"],
-    bio: "Builds products end to end, from the database schema to the interface. Worked with a Europe-based startup before going freelance.",
+    role: "Full-Stack Engineer",
+    experience: "8+ months",
+    skills: [
+      "TypeScript",
+      "React",
+      "Next.js",
+      "Node.js",
+      "Express",
+      "MongoDB",
+      "Redis",
+      "AWS",
+      "Docker",
+      "Socket.IO",
+      "Three.js",
+      "Solidity",
+    ],
+    bio: "Full-stack engineer building cloud-native products with React, Node.js, TypeScript and AWS. Interned at a Europe-based startup and two product companies before taking on freelance work. B.Tech in Computer Science, VIT Bhopal.",
     achievements: [
-      "Built Edunex, a school ERP with a React Native app, an admin dashboard and an Express + Prisma API, and runs it in production.",
-      "Built DeskX, an offline Windows app and command-line tool that strips sensitive data from spreadsheets before they're shared.",
-      "Built the 3D front end and the smart contracts for the Ethical Xchange data marketplace.",
+      "Software engineering intern at Mea-tec Battery Intelligence, a Europe-based startup: built a React and TypeScript component library of 20+ components shared across three internal products, and integrated AI models into the core application.",
+      "Software engineering intern at Qualimatrix: worked on an AI-powered hiring platform, including a real-time Socket.IO screening chatbot, Redis caching and services on AWS EC2, S3 and SES.",
+      "Software engineering intern at Venturloop: built admin dashboard pages in React with React Router and React Query.",
+      "Freelance: built Edunex, DeskX, and the 3D front end and smart contracts for the Ethical Xchange data marketplace.",
     ],
     projects: ["edunex", "deskx", "ethx-frontend", "ethx-contracts"],
-    socials: [{ label: "GitHub", url: "https://github.com/aaanmmoool" }],
+    socials: [
+      { label: "GitHub", url: "https://github.com/aaanmmoool" },
+      { label: "LinkedIn", url: "https://www.linkedin.com/in/anmol-singh-09854b251/" },
+      { label: "LeetCode", url: "https://leetcode.com/u/aaannmmool/" },
+    ],
     accent: "#7DA3FF",
   },
   {

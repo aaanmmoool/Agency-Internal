@@ -21,9 +21,9 @@ npx tsc --noEmit && npx eslint src   # types and lint
 Two things are deliberate and will look like omissions otherwise.
 
 **Some content is still placeholder.** The case studies in `src/data/projects.ts`
-and the contact email are real. The studio name and domain in `src/config/site.ts`
-and parts of the second team member in `src/data/team.ts` are stand-ins, each
-marked with a TODO; fill them in before the site goes anywhere near a client. The
+and the contact email are real. The studio name in `src/config/site.ts` and Manas's
+skills and links in `src/data/team.ts` are still stand-ins, each marked; fill them
+in when you have them. The
 team entries are written deliberately flat — roles describe what someone does,
 experience is a plain year count, and employment at a company is described as
 employment rather than as client work. Keep that tone when you add details.
