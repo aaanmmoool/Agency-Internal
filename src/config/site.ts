@@ -1,9 +1,9 @@
 /**
  * Studio identity and SEO defaults.
  *
- * PLACEHOLDER: the name, domain and contact details below are stand-ins.
- * Replace them before deploying — they are referenced by the metadata,
- * the sitemap, robots.txt and the structured data.
+ * PLACEHOLDER: the studio name below is still a stand-in. The URL is the live
+ * Vercel deployment — it is referenced by the metadata, the sitemap,
+ * robots.txt and the structured data.
  */
 
 export const SITE = {
@@ -14,18 +14,17 @@ export const SITE = {
   description:
     "A small engineering team building modern digital products, SaaS platforms, AI experiences and Web3 applications.",
   /** No trailing slash. */
-  url: "https://example.com",
+  url: "https://agency-internal-sooty.vercel.app",
   locale: "en_GB",
 } as const;
 
 export const CONTACT = {
-  email: "hello@example.com",
+  email: "anmolsinghtron123@gmail.com",
   location: "Remote",
 } as const;
 
 export const SOCIALS: { label: string; url: string }[] = [
-  { label: "GitHub", url: "https://github.com" },
-  { label: "LinkedIn", url: "https://linkedin.com" },
+  { label: "GitHub", url: "https://github.com/aaanmmoool" },
 ];
 
 /** The landing copy, kept here so the 3D and HTML routes stay in sync. */

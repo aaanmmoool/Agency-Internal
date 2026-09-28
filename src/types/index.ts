@@ -59,10 +59,10 @@ export interface TeamMember {
 }
 
 export type ProjectCategory =
-  | "SaaS Platform"
-  | "AI Product"
-  | "Web3 Platform"
-  | "Real-Time Application";
+  | "School ERP"
+  | "Desktop Application"
+  | "Web3 Frontend"
+  | "Smart Contracts & API";
 
 export interface Project {
   id: string;

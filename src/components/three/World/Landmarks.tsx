@@ -101,10 +101,15 @@ function useStructureMaterials() {
         roughness: 0.9,
         metalness: 0.05,
       }),
+      // Pushed back in depth so the road and its markings always win where
+      // they overlap it, rather than flickering against it.
       apron: new THREE.MeshStandardMaterial({
         color: "#191D2A",
         roughness: 0.95,
         metalness: 0.02,
+        polygonOffset: true,
+        polygonOffsetFactor: 2,
+        polygonOffsetUnits: 2,
       }),
     }),
   );
@@ -334,10 +339,13 @@ export function Interchange({ shadows, signDensity }: CommonProps) {
 
   return (
     <group>
-      {/* Widened apron the cards stand on */}
+      {/*
+        Widened apron the cards stand on. It sits below the road surface (0.02)
+        and its lane markings (0.03+), never level with them.
+      */}
       <group position={position} rotation={[0, rotationY, 0]}>
         <mesh
-          position={[0, 0.03, 0]}
+          position={[0, 0.005, 0]}
           rotation={[-Math.PI / 2, 0, 0]}
           material={m.apron}
           receiveShadow={shadows}
@@ -385,12 +393,6 @@ function ServiceCard({ service, index, shadows, signDensity }: ServiceCardProps)
       transparent: true,
     }),
     edge: new THREE.MeshBasicMaterial({ color: service.accent, toneMapped: false, transparent: true }),
-    slot: new THREE.MeshBasicMaterial({
-      color: service.accent,
-      toneMapped: false,
-      transparent: true,
-      depthWrite: false,
-    }),
   }));
 
   useFrame(() => {
@@ -407,16 +409,10 @@ function ServiceCard({ service, index, shadows, signDensity }: ServiceCardProps)
     face.opacity = shown;
     mats.body.opacity = shown;
     mats.edge.opacity = shown;
-    // The slot in the road lights just before its card breaks the surface.
-    mats.slot.opacity = Math.min(1, up * 3) * (1 - gone) * 0.85;
   });
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      <mesh position={[0, 0.06, 0]} material={mats.slot}>
-        <boxGeometry args={[plate.width + 0.5, 0.02, 0.5]} />
-      </mesh>
-
       <group ref={card}>
         <mesh position={[0, cy, 0]} material={mats.body} castShadow={shadows}>
           <boxGeometry args={[plate.width, plate.height, 0.22]} />

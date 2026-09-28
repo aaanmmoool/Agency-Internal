@@ -1,6 +1,6 @@
 # Overland — interactive studio portfolio
 
-A scroll-driven 3D experience for a four-person engineering studio. The visitor
+A scroll-driven 3D experience for a two-person engineering studio. The visitor
 drives through a stylised world and each district is a section of the portfolio:
 the team, their experience, the work, the services and how the studio delivers.
 
@@ -20,13 +20,13 @@ npx tsc --noEmit && npx eslint src   # types and lint
 
 Two things are deliberate and will look like omissions otherwise.
 
-**The content is placeholder.** `src/data/team.ts`, `src/data/projects.ts` and
-`src/config/site.ts` contain stand-in names, case studies, contact details and a
-studio name. Every one is marked. Replace them before the site goes anywhere near
-a client. The team entries are written deliberately flat — roles describe what
-someone does, experience is a plain year count, and employment at a company is
-described as employment rather than as client work. Keep that tone when you swap
-the real details in.
+**Some content is still placeholder.** The case studies in `src/data/projects.ts`
+and the contact email are real. The studio name and domain in `src/config/site.ts`
+and parts of the second team member in `src/data/team.ts` are stand-ins, each
+marked with a TODO; fill them in before the site goes anywhere near a client. The
+team entries are written deliberately flat — roles describe what someone does,
+experience is a plain year count, and employment at a company is described as
+employment rather than as client work. Keep that tone when you add details.
 
 **There are no GLB files.** The world is procedural geometry and instanced
 meshes, not authored assets, because building them needs Blender. The whole city

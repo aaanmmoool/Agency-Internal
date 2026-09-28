@@ -28,7 +28,7 @@ export function teamBoard({ width, height }: Size): BoardSpec {
     { kind: "heading" as const, text: member.name, scale: 0.5, aside: member.experience },
     { kind: "eyebrow" as const, text: member.role, color: member.accent },
     { kind: "text" as const, text: member.bio },
-    { kind: "tags" as const, items: member.skills.slice(0, 4) },
+    ...(member.skills.length ? [{ kind: "tags" as const, items: member.skills.slice(0, 4) }] : []),
   ];
 
   const rows = [];
@@ -39,13 +39,14 @@ export function teamBoard({ width, height }: Size): BoardSpec {
   return {
     width,
     height,
-    unit: 0.3,
+    unit: 0.36,
+    valign: "middle",
     blocks: [
       { kind: "eyebrow", text: missionLabel("team") },
       { kind: "heading", text: "The Team", scale: 0.95 },
       {
         kind: "text",
-        text: "Four engineers. We take on a small number of projects at a time, so the people you meet are the people who write the code.",
+        text: "Two engineers. We take on a small number of projects at a time, so the people you meet are the people who write the code.",
       },
       ...rows,
     ],
@@ -70,7 +71,7 @@ export function experienceBoard(landmark: ExperienceLandmark, { width, height }:
         ? [
             {
               kind: "text" as const,
-              text: "Where the four of us learned this, before the studio existed.",
+              text: "Where the two of us learned this, before the studio existed.",
               scale: 0.9,
             },
           ]

@@ -54,7 +54,7 @@ export function StaticContent({ onEnterWorld }: Props) {
         {/* --- Team -------------------------------------------------------- */}
         <Section
           stop="team"
-          intro="Four engineers. We take on a small number of projects at a time, so the people you meet are the people who write the code."
+          intro="Two engineers. We take on a small number of projects at a time, so the people you meet are the people who write the code."
         >
           <ul className="grid gap-4 md:grid-cols-2">
             {team.map((member) => (
@@ -79,7 +79,7 @@ export function StaticContent({ onEnterWorld }: Props) {
                 </div>
 
                 <p className="mt-4 text-sm leading-relaxed text-ink-muted">{member.bio}</p>
-                <Chips items={member.skills} className="mt-5" />
+                {member.skills.length > 0 && <Chips items={member.skills} className="mt-5" />}
 
                 <h4 className="mt-7 text-[0.66rem] tracking-label text-ink-faint uppercase">
                   Selected work
@@ -112,7 +112,7 @@ export function StaticContent({ onEnterWorld }: Props) {
         </Section>
 
         {/* --- Experience -------------------------------------------------- */}
-        <Section stop="experience" intro="Where the four of us learned this, before the studio existed.">
+        <Section stop="experience" intro="Where the two of us learned this, before the studio existed.">
           <dl className="grid gap-4 sm:grid-cols-2">
             {experienceLandmarks.map((landmark, i) => (
               <div

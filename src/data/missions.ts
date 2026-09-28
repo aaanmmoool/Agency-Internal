@@ -136,7 +136,7 @@ export const experienceLandmarks: ExperienceLandmark[] = [
     id: "mnc",
     label: "Enterprise",
     detail:
-      "Years spent inside large engineering organisations: review processes, compliance constraints and systems with real users attached.",
+      "Two years inside FischerJordan and Highspot: code review, larger codebases and systems with real customers on them.",
     accent: "#7DA3FF",
     at: 0.25,
   },
@@ -144,7 +144,7 @@ export const experienceLandmarks: ExperienceLandmark[] = [
     id: "web3",
     label: "Web3",
     detail:
-      "Contracts written, audited and deployed. Indexers, wallets and the operational care that on-chain work demands.",
+      "Escrow and sale contracts, Sign-In with Ethereum and encrypted delivery for an on-chain data marketplace, tested on Sepolia.",
     accent: "#C9A7FF",
     at: 0.29,
   },
@@ -152,7 +152,7 @@ export const experienceLandmarks: ExperienceLandmark[] = [
     id: "startup",
     label: "Product",
     detail:
-      "Zero-to-one product development under time pressure, where scope decisions matter more than architecture diagrams.",
+      "Product work at a Europe-based startup, under time pressure, where scope decisions matter more than architecture diagrams.",
     accent: "#8FE3C4",
     at: 0.33,
   },
@@ -160,7 +160,7 @@ export const experienceLandmarks: ExperienceLandmark[] = [
     id: "production",
     label: "Production",
     detail:
-      "On-call rotations, incident reviews and migrations run without downtime. We have operated what we built.",
+      "Edunex runs in production for a school. We ship its deploys, run its migrations and fix what breaks. We operate what we build.",
     accent: "#FFC48F",
     at: 0.37,
   },
